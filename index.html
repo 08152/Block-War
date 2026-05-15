@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GitHub 3D Viewer</title>
+
+<style>
+html,body{
+    margin:0;
+    overflow:hidden;
+    background:#000;
+    font-family:Arial;
+}
+
+#ui{
+    position:absolute;
+    top:10px;
+    left:10px;
+    z-index:10;
+    background:rgba(0,0,0,0.7);
+    color:white;
+    padding:10px;
+    border-radius:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="ui">Lade 3D Modell...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.181.1/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+
+/* =========================
+   SCENE
+========================= */
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+/* =========================
+   CAMERA
+========================= */
+const camera = new THREE.PerspectiveCamera(
+    75,
+    innerWidth/innerHeight,
+    0.1,
+    1000
+);
+camera.position.set(0,2,6);
+
+/* =========================
+   RENDERER
+========================= */
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* =========================
+   LIGHT
+========================= */
+scene.add(new THREE.AmbientLight(0xffffff,1.5));
+
+const sun = new THREE.DirectionalLight(0xffffff,2);
+sun.position.set(5,10,5);
+scene.add(sun);
+
+/* =========================
+   GRÜNER BODEN
+========================= */
+const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(100,100),
+    new THREE.MeshStandardMaterial({color:0x00aa00})
+);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+/* =========================
+   FALLBACK (SIEHST DU IMMER)
+========================= */
+const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(),
+    new THREE.MeshStandardMaterial({color:0xff0000})
+);
+cube.position.y = 1;
+scene.add(cube);
+
+/* =========================
+   GLB PATH (WICHTIG)
+========================= */
+
+// Wenn GitHub Pages aktiv ist:
+const glbPath = "./1.glb";
+
+const loader = new THREE.GLTFLoader();
+
+loader.load(
+    glbPath,
+
+    function(gltf){
+
+        scene.remove(cube);
+
+        const model = gltf.scene;
+
+        // center fix
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
+
+        // scale fix
+        const size = box.getSize(new THREE.Vector3());
+        const max = Math.max(size.x,size.y,size.z);
+        model.scale.setScalar(2/max);
+
+        scene.add(model);
+
+        document.getElementById("ui").innerText =
+            "3D Modell geladen ✔";
+
+    },
+
+    undefined,
+
+    function(err){
+        console.error(err);
+        document.getElementById("ui").innerText =
+            "Fehler: GLB nicht geladen";
+    }
+);
+
+/* =========================
+   LOOP
+========================= */
+function animate(){
+    requestAnimationFrame(animate);
+    renderer.render(scene,camera);
+}
+animate();
+
+/* =========================
+   RESIZE
+========================= */
+addEventListener("resize",()=>{
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+});
+
+</script>
+
+</body>
+</html>
